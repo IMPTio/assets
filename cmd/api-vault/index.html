@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="API Vault" />
+  <meta name="theme-color" content="#0f172a" />
+  <link rel="manifest" href="manifest.json" />
+  <title>API Vault</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface2: #273548;
+      --border: #334155;
+      --accent: #38bdf8;
+      --accent-dim: #0ea5e9;
+      --danger: #f87171;
+      --text: #f1f5f9;
+      --text-dim: #94a3b8;
+      --radius: 14px;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      overscroll-behavior: none;
+    }
+
+    body { display: flex; flex-direction: column; min-height: 100dvh; }
+
+    /* ── Lock Screen ── */
+    #lock-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      padding: 32px 24px;
+      gap: 24px;
+    }
+
+    .lock-icon { font-size: 56px; }
+
+    .lock-title { font-size: 24px; font-weight: 700; }
+    .lock-sub { font-size: 14px; color: var(--text-dim); text-align: center; }
+
+    .pin-display {
+      display: flex;
+      gap: 12px;
+      margin: 8px 0;
+    }
+
+    .pin-dot {
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+      transition: background 0.15s;
+    }
+    .pin-dot.filled { background: var(--accent); border-color: var(--accent); }
+
+    .numpad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      width: 100%;
+      max-width: 280px;
+    }
+
+    .numpad-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius);
+      padding: 18px 0;
+      font-size: 22px;
+      font-weight: 500;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.1s;
+      user-select: none;
+    }
+    .numpad-btn:active { background: var(--surface2); }
+    .numpad-btn.del { font-size: 18px; }
+    .numpad-btn.empty { background: transparent; border: none; cursor: default; }
+
+    .lock-error {
+      color: var(--danger);
+      font-size: 13px;
+      min-height: 18px;
+      text-align: center;
+    }
+
+    /* ── App Shell ── */
+    #app { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: calc(var(--safe-top) + 12px) 16px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .header-title { font-size: 18px; font-weight: 700; }
+
+    .header-actions { display: flex; gap: 8px; }
+
+    .icon-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 10px;
+      width: 36px; height: 36px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      font-size: 16px;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.1s;
+    }
+    .icon-btn:active { background: var(--border); }
+
+    .search-bar {
+      padding: 10px 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .search-input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 15px;
+      padding: 9px 12px;
+      outline: none;
+    }
+    .search-input::placeholder { color: var(--text-dim); }
+    .search-input:focus { border-color: var(--accent); }
+
+    .key-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 16px calc(var(--safe-bottom) + 80px);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      gap: 12px;
+      color: var(--text-dim);
+      padding: 60px 0;
+    }
+    .empty-state .icon { font-size: 48px; }
+    .empty-state p { font-size: 15px; }
+
+    .key-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .key-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .key-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .key-service {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .key-note {
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+
+    .key-value-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+    }
+
+    .key-value {
+      flex: 1;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 13px;
+      color: var(--text-dim);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      user-select: none;
+    }
+    .key-value.revealed {
+      color: var(--text);
+      word-break: break-all;
+      white-space: normal;
+    }
+
+    .card-actions { display: flex; gap: 6px; }
+
+    .sm-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      white-space: nowrap;
+      transition: all 0.1s;
+    }
+    .sm-btn:active { background: var(--border); }
+    .sm-btn.danger { color: var(--danger); border-color: #7f1d1d; }
+    .sm-btn.danger:active { background: #450a0a; }
+    .sm-btn.copied { color: #4ade80; border-color: #166534; }
+
+    /* ── FAB ── */
+    .fab {
+      position: fixed;
+      bottom: calc(var(--safe-bottom) + 24px);
+      right: 24px;
+      width: 56px; height: 56px;
+      background: var(--accent);
+      color: #0f172a;
+      border: none;
+      border-radius: 50%;
+      font-size: 28px;
+      font-weight: 300;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(56,189,248,0.4);
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.15s;
+      z-index: 10;
+    }
+    .fab:active { transform: scale(0.92); }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 100;
+      align-items: flex-end;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border-radius: var(--radius) var(--radius) 0 0;
+      padding: 20px 20px calc(var(--safe-bottom) + 20px);
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .modal-handle {
+      width: 40px; height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      align-self: center;
+      margin-bottom: 4px;
+    }
+
+    .modal-title { font-size: 17px; font-weight: 700; }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field label { font-size: 13px; color: var(--text-dim); font-weight: 500; }
+
+    .field input, .field textarea {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 15px;
+      padding: 10px 12px;
+      outline: none;
+      width: 100%;
+    }
+    .field input:focus, .field textarea:focus { border-color: var(--accent); }
+    .field textarea { min-height: 80px; resize: vertical; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px; }
+
+    .modal-actions { display: flex; gap: 10px; margin-top: 4px; }
+
+    .btn {
+      flex: 1;
+      padding: 13px;
+      border-radius: var(--radius);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      -webkit-tap-highlight-color: transparent;
+      transition: opacity 0.1s;
+    }
+    .btn:active { opacity: 0.8; }
+    .btn-primary { background: var(--accent); color: #0f172a; }
+    .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed;
+      bottom: calc(var(--safe-bottom) + 100px);
+      left: 50%; transform: translateX(-50%) translateY(20px);
+      background: #1e293b;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 10px 20px;
+      font-size: 14px;
+      opacity: 0;
+      transition: all 0.25s;
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 200;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+<!-- ── Lock Screen ── -->
+<div id="lock-screen">
+  <div class="lock-icon">🔐</div>
+  <div class="lock-title" id="lock-title">API Vault</div>
+  <div class="lock-sub" id="lock-sub">Enter your PIN</div>
+  <div class="pin-display" id="pin-display"></div>
+  <div class="lock-error" id="lock-error"></div>
+  <div class="numpad" id="numpad"></div>
+</div>
+
+<!-- ── Main App ── -->
+<div id="app">
+  <header>
+    <div class="header-title">🔑 API Vault</div>
+    <div class="header-actions">
+      <button class="icon-btn" onclick="lockApp()" title="Lock">🔒</button>
+    </div>
+  </header>
+  <div class="search-bar">
+    <input class="search-input" type="search" id="search" placeholder="Search keys…" oninput="renderList()" />
+  </div>
+  <div class="key-list" id="key-list"></div>
+  <button class="fab" onclick="openAddModal()">+</button>
+</div>
+
+<!-- ── Add/Edit Modal ── -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-title">Add API Key</div>
+    <div class="field">
+      <label>Service / Label</label>
+      <input id="f-service" type="text" placeholder="e.g. OpenAI, Stripe, GitHub…" />
+    </div>
+    <div class="field">
+      <label>API Key</label>
+      <textarea id="f-key" placeholder="Paste your key here…"></textarea>
+    </div>
+    <div class="field">
+      <label>Note (optional)</label>
+      <input id="f-note" type="text" placeholder="e.g. Production, read-only…" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveKey()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast ── -->
+<div id="toast"></div>
+
+<script>
+// ── Crypto helpers ────────────────────────────────────────────────────────────
+const enc = new TextEncoder();
+const dec = new TextDecoder();
+
+async function deriveKey(pin, salt) {
+  const base = await crypto.subtle.importKey('raw', enc.encode(pin), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: 250_000, hash: 'SHA-256' },
+    base,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+}
+
+async function encrypt(key, plaintext) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, enc.encode(plaintext));
+  const buf = new Uint8Array(iv.byteLength + ct.byteLength);
+  buf.set(iv, 0);
+  buf.set(new Uint8Array(ct), iv.byteLength);
+  return btoa(String.fromCharCode(...buf));
+}
+
+async function decrypt(key, b64) {
+  const buf = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+  const iv = buf.slice(0, 12);
+  const ct = buf.slice(12);
+  const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ct);
+  return dec.decode(pt);
+}
+
+function randB64(n) {
+  return btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(n))));
+}
+
+// ── State ────────────────────────────────────────────────────────────────────
+const STORE = 'apivault_v1';
+let cryptoKey = null;
+let entries = [];   // { id, service, keyEnc, noteEnc, revealed }
+let editId = null;
+
+function saveStore() {
+  const payload = { entries: entries.map(e => ({ id: e.id, service: e.service, keyEnc: e.keyEnc, noteEnc: e.noteEnc })) };
+  localStorage.setItem(STORE, JSON.stringify(payload));
+}
+
+function loadStore() {
+  const raw = localStorage.getItem(STORE);
+  if (!raw) return [];
+  try { return JSON.parse(raw).entries || []; } catch { return []; }
+}
+
+// ── PIN / Lock Screen ─────────────────────────────────────────────────────────
+const SALT_KEY = 'apivault_salt';
+const VERIFY_KEY = 'apivault_verify';
+const PIN_LEN = 6;
+
+let pinInput = '';
+let settingPin = false;
+let pinConfirm = '';
+let confirmStep = false;
+
+function getSalt() {
+  let s = localStorage.getItem(SALT_KEY);
+  if (!s) { s = randB64(16); localStorage.setItem(SALT_KEY, s); }
+  return Uint8Array.from(atob(s), c => c.charCodeAt(0));
+}
+
+function hasPin() { return !!localStorage.getItem(VERIFY_KEY); }
+
+function buildNumpad() {
+  const pad = document.getElementById('numpad');
+  pad.innerHTML = '';
+  const digits = ['1','2','3','4','5','6','7','8','9','','0','⌫'];
+  digits.forEach(d => {
+    const btn = document.createElement('button');
+    btn.className = 'numpad-btn' + (d === '⌫' ? ' del' : '') + (d === '' ? ' empty' : '');
+    btn.textContent = d;
+    if (d !== '') btn.addEventListener('click', () => numpadTap(d));
+    pad.appendChild(btn);
+  });
+}
+
+function updateDots() {
+  const dots = document.getElementById('pin-display');
+  dots.innerHTML = '';
+  for (let i = 0; i < PIN_LEN; i++) {
+    const d = document.createElement('div');
+    d.className = 'pin-dot' + (i < pinInput.length ? ' filled' : '');
+    dots.appendChild(d);
+  }
+}
+
+function setLockError(msg) { document.getElementById('lock-error').textContent = msg; }
+
+function numpadTap(d) {
+  setLockError('');
+  if (d === '⌫') { pinInput = pinInput.slice(0, -1); updateDots(); return; }
+  if (pinInput.length >= PIN_LEN) return;
+  pinInput += d;
+  updateDots();
+  if (pinInput.length === PIN_LEN) setTimeout(handlePinComplete, 80);
+}
+
+async function handlePinComplete() {
+  if (settingPin) {
+    if (!confirmStep) {
+      pinConfirm = pinInput;
+      pinInput = '';
+      confirmStep = true;
+      document.getElementById('lock-sub').textContent = 'Confirm your PIN';
+      updateDots();
+      return;
+    }
+    if (pinInput !== pinConfirm) {
+      setLockError('PINs don\'t match — try again');
+      pinInput = ''; pinConfirm = ''; confirmStep = false;
+      document.getElementById('lock-sub').textContent = 'Choose a 6-digit PIN';
+      updateDots();
+      return;
+    }
+    // Save verify token
+    const salt = getSalt();
+    const key = await deriveKey(pinInput, salt);
+    const token = await encrypt(key, 'vault-ok');
+    localStorage.setItem(VERIFY_KEY, token);
+    cryptoKey = key;
+    entries = loadStore();
+    unlockApp();
+    return;
+  }
+
+  // Verify
+  const salt = getSalt();
+  const key = await deriveKey(pinInput, salt);
+  try {
+    const token = localStorage.getItem(VERIFY_KEY);
+    const result = await decrypt(key, token);
+    if (result === 'vault-ok') {
+      cryptoKey = key;
+      entries = loadStore();
+      unlockApp();
+    } else {
+      throw new Error();
+    }
+  } catch {
+    setLockError('Wrong PIN');
+    pinInput = '';
+    updateDots();
+  }
+}
+
+function initLockScreen() {
+  buildNumpad();
+  if (!hasPin()) {
+    settingPin = true;
+    document.getElementById('lock-title').textContent = 'Create PIN';
+    document.getElementById('lock-sub').textContent = 'Choose a 6-digit PIN';
+  } else {
+    document.getElementById('lock-sub').textContent = 'Enter your 6-digit PIN';
+  }
+  updateDots();
+}
+
+function unlockApp() {
+  document.getElementById('lock-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  renderList();
+}
+
+function lockApp() {
+  cryptoKey = null;
+  entries = [];
+  pinInput = '';
+  settingPin = false;
+  confirmStep = false;
+  document.getElementById('search').value = '';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('lock-screen').style.display = 'flex';
+  initLockScreen();
+}
+
+// ── Render List ───────────────────────────────────────────────────────────────
+function renderList() {
+  const q = document.getElementById('search').value.toLowerCase().trim();
+  const list = document.getElementById('key-list');
+  const filtered = q ? entries.filter(e => e.service.toLowerCase().includes(q)) : entries;
+
+  if (!filtered.length) {
+    list.innerHTML = `<div class="empty-state"><div class="icon">🗝️</div><p>${q ? 'No results' : 'No keys yet — tap + to add one'}</p></div>`;
+    return;
+  }
+
+  list.innerHTML = '';
+  filtered.forEach(entry => {
+    const card = document.createElement('div');
+    card.className = 'key-card';
+    card.innerHTML = `
+      <div class="key-card-header">
+        <div class="key-service">${esc(entry.service)}</div>
+      </div>
+      ${entry.noteEnc ? `<div class="key-note" id="note-${entry.id}">…</div>` : ''}
+      <div class="key-value-row">
+        <div class="key-value" id="val-${entry.id}">••••••••••••••••</div>
+      </div>
+      <div class="card-actions">
+        <button class="sm-btn" onclick="toggleReveal('${entry.id}')">👁 Show</button>
+        <button class="sm-btn" id="copy-${entry.id}" onclick="copyKey('${entry.id}')">📋 Copy</button>
+        <button class="sm-btn" onclick="openEditModal('${entry.id}')">✏️ Edit</button>
+        <button class="sm-btn danger" onclick="deleteKey('${entry.id}')">🗑 Delete</button>
+      </div>
+    `;
+    list.appendChild(card);
+
+    if (entry.noteEnc) loadNote(entry);
+  });
+}
+
+async function loadNote(entry) {
+  try {
+    const note = await decrypt(cryptoKey, entry.noteEnc);
+    const el = document.getElementById(`note-${entry.id}`);
+    if (el) el.textContent = note;
+  } catch {}
+}
+
+async function toggleReveal(id) {
+  const entry = entries.find(e => e.id === id);
+  if (!entry) return;
+  const el = document.getElementById(`val-${entry.id}`);
+  if (!el) return;
+  if (entry.revealed) {
+    entry.revealed = false;
+    el.textContent = '••••••••••••••••';
+    el.classList.remove('revealed');
+  } else {
+    try {
+      const plain = await decrypt(cryptoKey, entry.keyEnc);
+      entry.revealed = true;
+      el.textContent = plain;
+      el.classList.add('revealed');
+    } catch { showToast('Decryption failed'); }
+  }
+}
+
+async function copyKey(id) {
+  const entry = entries.find(e => e.id === id);
+  if (!entry) return;
+  try {
+    const plain = await decrypt(cryptoKey, entry.keyEnc);
+    await navigator.clipboard.writeText(plain);
+    const btn = document.getElementById(`copy-${id}`);
+    if (btn) { btn.textContent = '✓ Copied'; btn.classList.add('copied'); setTimeout(() => { btn.textContent = '📋 Copy'; btn.classList.remove('copied'); }, 1500); }
+  } catch { showToast('Copy failed'); }
+}
+
+function deleteKey(id) {
+  if (!confirm('Delete this key?')) return;
+  entries = entries.filter(e => e.id !== id);
+  saveStore();
+  renderList();
+  showToast('Key deleted');
+}
+
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ── Add / Edit Modal ──────────────────────────────────────────────────────────
+function openAddModal() {
+  editId = null;
+  document.getElementById('modal-title').textContent = 'Add API Key';
+  document.getElementById('f-service').value = '';
+  document.getElementById('f-key').value = '';
+  document.getElementById('f-note').value = '';
+  document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('f-service').focus(), 100);
+}
+
+async function openEditModal(id) {
+  const entry = entries.find(e => e.id === id);
+  if (!entry) return;
+  editId = id;
+  document.getElementById('modal-title').textContent = 'Edit Key';
+  document.getElementById('f-service').value = entry.service;
+  try { document.getElementById('f-key').value = await decrypt(cryptoKey, entry.keyEnc); } catch {}
+  try { document.getElementById('f-note').value = entry.noteEnc ? await decrypt(cryptoKey, entry.noteEnc) : ''; } catch {}
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('modal-overlay')) return;
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+async function saveKey() {
+  const service = document.getElementById('f-service').value.trim();
+  const keyVal = document.getElementById('f-key').value.trim();
+  const note = document.getElementById('f-note').value.trim();
+  if (!service || !keyVal) { showToast('Service and key are required'); return; }
+
+  const keyEnc = await encrypt(cryptoKey, keyVal);
+  const noteEnc = note ? await encrypt(cryptoKey, note) : '';
+
+  if (editId) {
+    const idx = entries.findIndex(e => e.id === editId);
+    if (idx >= 0) entries[idx] = { ...entries[idx], service, keyEnc, noteEnc, revealed: false };
+  } else {
+    entries.unshift({ id: Date.now().toString(36) + Math.random().toString(36).slice(2), service, keyEnc, noteEnc, revealed: false });
+  }
+
+  saveStore();
+  document.getElementById('modal-overlay').classList.remove('open');
+  renderList();
+  showToast(editId ? 'Key updated' : 'Key saved');
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ── Boot ─────────────────────────────────────────────────────────────────────
+initLockScreen();
+</script>
+</body>
+</html>
