@@ -1,0 +1,137 @@
+<!--
+  IMPT Google Ads — Conversion Tracking Code
+
+  WHERE TO INSTALL:
+  - Paste the Google Tag (Section 1) in the <head> of EVERY page on impt.io
+  - Paste the Booking Confirmation tag (Section 2) ONLY on the booking confirmation/thank you page
+  - Paste the Hotel Search tag (Section 3) on the search results page
+  - Paste the Remarketing tag (Section 4) on EVERY page
+
+  IMPORTANT: Replace all instances of AW-XXXXXXXXX with your actual
+  Google Ads Conversion ID (found in Google Ads → Tools → Conversions)
+
+  If using WordPress, install via Google Tag Manager instead (recommended).
+-->
+
+<!-- ============================================================ -->
+<!-- SECTION 1: Global Google Tag — Paste in <head> of ALL pages -->
+<!-- ============================================================ -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-XXXXXXXXX"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'AW-XXXXXXXXX', {
+    'allow_enhanced_conversions': true  // Improves conversion matching accuracy
+  });
+</script>
+
+
+<!-- ============================================================ -->
+<!-- SECTION 2: Booking Confirmation — Paste on thank-you page ONLY -->
+<!-- This fires when a hotel booking is completed — PRIMARY conversion -->
+<!-- ============================================================ -->
+<script>
+  // Extract booking value dynamically — replace these variables with
+  // actual values from your booking system
+  var bookingValue    = 150.00;  // Replace with actual booking value in EUR
+  var bookingCurrency = 'EUR';
+  var bookingId       = 'ORDER_ID_HERE'; // Replace with actual order/booking ID
+
+  gtag('event', 'conversion', {
+    'send_to':        'AW-XXXXXXXXX/BOOKING_CONVERSION_LABEL',
+    'value':          bookingValue,
+    'currency':       bookingCurrency,
+    'transaction_id': bookingId
+  });
+
+  // Also fire as a standard purchase event for GA4 compatibility
+  gtag('event', 'purchase', {
+    'transaction_id': bookingId,
+    'value':          bookingValue,
+    'currency':       bookingCurrency,
+    'items': [{
+      'item_id':       bookingId,
+      'item_name':     'Hotel Booking',
+      'item_category': 'Travel',
+      'quantity':      1,
+      'price':         bookingValue
+    }]
+  });
+</script>
+
+
+<!-- ============================================================ -->
+<!-- SECTION 3: Hotel Search — Paste on search results page -->
+<!-- Micro-conversion — tells Google who is searching (high intent) -->
+<!-- ============================================================ -->
+<script>
+  gtag('event', 'conversion', {
+    'send_to': 'AW-XXXXXXXXX/SEARCH_CONVERSION_LABEL'
+  });
+
+  gtag('event', 'search', {
+    'search_term': document.querySelector('[name="q"]')
+      ? document.querySelector('[name="q"]').value
+      : 'hotel search'
+  });
+</script>
+
+
+<!-- ============================================================ -->
+<!-- SECTION 4: Remarketing Tag — Paste on EVERY page -->
+<!-- Builds remarketing audiences to retarget visitors -->
+<!-- ============================================================ -->
+<script>
+  // Homepage visitors
+  if (window.location.pathname === '/') {
+    gtag('event', 'page_view', {
+      'send_to':    'AW-XXXXXXXXX',
+      'ecomm_pagetype': 'home'
+    });
+  }
+
+  // Hotel search results page
+  if (window.location.pathname.indexOf('/search') !== -1 ||
+      window.location.pathname.indexOf('/hotels') !== -1) {
+    gtag('event', 'page_view', {
+      'send_to':    'AW-XXXXXXXXX',
+      'ecomm_pagetype': 'searchresults'
+    });
+  }
+
+  // Booking started / checkout page
+  if (window.location.pathname.indexOf('/checkout') !== -1 ||
+      window.location.pathname.indexOf('/book') !== -1) {
+    gtag('event', 'begin_checkout', {
+      'send_to':    'AW-XXXXXXXXX',
+      'ecomm_pagetype': 'cart',
+      'value':      bookingValue || 0,
+      'currency':   'EUR'
+    });
+  }
+</script>
+
+
+<!-- ============================================================ -->
+<!-- SECTION 5: Enhanced Conversions — Capture hashed user data -->
+<!-- Install this on the booking confirmation page -->
+<!-- Significantly improves conversion matching in privacy-first browsers -->
+<!-- ============================================================ -->
+<script>
+  // Only run on confirmation page when user data is available
+  // Replace these with actual values from your booking system
+  function fireEnhancedConversion(userEmail, userPhone, firstName, lastName) {
+    gtag('set', 'user_data', {
+      'email':      userEmail,   // e.g., 'customer@email.com'
+      'phone_number': userPhone, // e.g., '+353871234567'
+      'address': {
+        'first_name': firstName,
+        'last_name':  lastName
+      }
+    });
+  }
+
+  // Call this after booking confirmation with real user data:
+  // fireEnhancedConversion('customer@email.com', '+353871234567', 'John', 'Smith');
+</script>
