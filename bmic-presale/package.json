@@ -1,0 +1,27 @@
+{
+  "name": "bmic-presale",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "remotion": {
+    "entryPoint": "src/index.ts"
+  },
+  "scripts": {
+    "studio": "npx remotion studio src/index.ts",
+    "render": "npx remotion still src/index.ts BmicPresaleStill out/bmic-presale.png",
+    "render-video": "npx remotion render src/index.ts BmicPresaleVideo out/bmic-presale.mp4"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@remotion/cli": "^4.0.447",
+    "@remotion/three": "^4.0.447",
+    "@types/react": "^19.2.14",
+    "@types/three": "^0.183.1",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "remotion": "^4.0.447",
+    "three": "^0.183.2"
+  }
+}
